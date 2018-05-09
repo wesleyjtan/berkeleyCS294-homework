@@ -16,3 +16,13 @@ In `experts/`, the provided expert policies are:
 * Walker2d-v1.pkl
 
 The name of the pickle file corresponds to the name of the gym environment.
+
+### Additional
+In order to run behavorial cloning or DAgger, the data generated from expert policies is required. Based on [Humanoid-v2] environment, to generate the data, run:
+`python run_expert.py experts/Humanoid-v2.pkl Humanoid-v2 --num_rollouts 20`
+
+For behavorial cloning, run:
+`    python behavioral_cloning.py experts/Humanoid-v2.pkl Humanoid-v2 data_experts/Humanoid-v2_20_data.pkl --num_rollouts 20`
+
+For DAgger algorithm, run:
+
