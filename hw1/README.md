@@ -24,7 +24,8 @@ In order to run behavorial cloning or DAgger, the data generated from expert pol
 
 For behavorial cloning, run:
 
-`    python behavioral_cloning.py experts/Humanoid-v2.pkl Humanoid-v2 data_experts/Humanoid-v2_20_data.pkl --num_rollouts 20`
+`    python run_behavioral_cloning.py experts/Humanoid-v2.pkl Humanoid-v2 data_experts/Humanoid-v2_20_data.pkl --num_rollouts 20`
 
 For DAgger algorithm, run:
 
+`    python run_dagger.py experts/Humanoid-v2.pkl Humanoid-v2 data_experts/Humanoid-v2_20_data.pkl --num_rollouts 20`

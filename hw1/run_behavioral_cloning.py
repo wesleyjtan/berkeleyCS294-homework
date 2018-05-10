@@ -3,7 +3,7 @@
 """
 Behavorial cloning of an expert policy using a simple Feedforward Neural Network.
 Example usage:
-    python behavioral_cloning.py experts/Humanoid-v2.pkl Humanoid-v2 data_experts/Humanoid-v2_20_data.pkl --num_rollouts 20 #--render
+    python run_behavioral_cloning.py experts/Humanoid-v2.pkl Humanoid-v2 data_experts/Humanoid-v2_20_data.pkl --num_rollouts 20 #--render
 """
 
 import pickle
