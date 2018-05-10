@@ -43,7 +43,7 @@ def main():
 	policy_fn = load_policy.load_policy(args.expert_policy_file)
 	print('loaded and built')
 
-	# setting task
+	# set task
 	task = args.envname
 	task_data = args.data_file
 
@@ -75,7 +75,7 @@ def main():
 	model.add(Dense(128, activation='relu'))
 	model.add(Dense(act_data.shape[2], activation='linear'))
 	model.compile(loss='msle', optimizer='adam', metrics=['accuracy'])
-	model.fit(X_train, Y_train, batch_size=64, nb_epoch=20, verbose=1)
+	model.fit(X_train, Y_train, batch_size=64, nb_epoch=2, verbose=1)
 	score = model.evaluate(X_test, Y_test, verbose=1)
 	model.save('models/' + task + '_cloned_model.h5')
 	
@@ -102,9 +102,9 @@ def main():
 				# obs = obs.reshape(1, len(obs), 1)
 				obs = obs.reshape(1, len(obs))
 				action = (model.predict(obs, batch_size=64, verbose=0))
-				# print 'obs: ' + str(obs)
-				# print "predicted: " + str(action)
-				# print "expert: " + str(exp_action)
+				print ('obs: ' + str(obs))
+				print ("predicted: " + str(action))
+				print ("expert: " + str(exp_action))
 
 				new_observations.append(obs)
 				new_exp_actions.append(exp_action)
