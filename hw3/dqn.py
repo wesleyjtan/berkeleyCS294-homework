@@ -7,6 +7,8 @@ import tensorflow                as tf
 import tensorflow.contrib.layers as layers
 from collections import namedtuple
 from dqn_utils import *
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="3"   
 
 OptimizerSpec = namedtuple("OptimizerSpec", ["constructor", "kwargs", "lr_schedule"])
 
@@ -128,6 +130,14 @@ def learn(env,
     ######
     
     # YOUR CODE HERE
+    q = q_func(obs_t_float, num_actions, scope="q_func", reuse=False)
+    target_q = q_func(obs_tp1_float, num_actions, scope="target_q_func", reuse=False)
+    Q_samp = rew_t_ph + (1 - done_mask_ph) * gamma * tf.reduce_max(target_q, axis=1)
+    Q_s = tf.reduce_sum(q * tf.one_hot(act_t_ph, num_actions), axis=1)
+    total_error = tf.reduce_mean(tf.square(Q_samp - Q_s))
+    q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='q_func')
+    target_q_func_vars = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope='target_q_func')
+
 
     ######
 
@@ -195,7 +205,25 @@ def learn(env,
         #####
         
         # YOUR CODE HERE
+        idx = replay_buffer.store_frame(last_obs)
+        q_input = replay_buffer.encode_recent_observation()
 
+        if (np.random.random() < exploration.value(t)) or not model_initialized:
+            action = env.action_space.sample()
+        else:
+            # chose action according to current Q and exploration
+            action_values = session.run(q, feed_dict={obs_t_ph: [q_input]})[0]
+            action = np.argmax(action_values)
+
+        # perform action in env
+        new_state, reward, done, info = env.step(action)
+
+        # store the transition
+        replay_buffer.store_effect(idx, action, reward, done)
+        last_obs = new_state
+
+        if done:
+            last_obs = env.reset()
         #####
 
         # at this point, the environment should have been advanced one step (and
@@ -245,7 +273,18 @@ def learn(env,
             #####
             
             # YOUR CODE HERE
+            obs_batch, act_batch, rew_batch, obs_tp1_batch, done_mask_batch = replay_buffer.sample(batch_size)
 
+            if not model_initialized:
+                initialize_interdependent_variables(session, tf.global_variables(),{obs_t_ph: obs_batch, obs_tp1_ph: obs_tp1_batch})
+                model_initialized = True
+
+            session.run(train_fn, feed_dict = {obs_t_ph: obs_batch, act_t_ph: act_batch, rew_t_ph: rew_batch, obs_tp1_ph: obs_tp1_batch, done_mask_ph: done_mask_batch, learning_rate: optimizer_spec.lr_schedule.value(t)})
+
+            num_param_updates += 1
+            if num_param_updates % target_update_freq == 0:
+                session.run(update_target_fn)
+                # num_param_updates = 0
             #####
 
         ### 4. Log progress
