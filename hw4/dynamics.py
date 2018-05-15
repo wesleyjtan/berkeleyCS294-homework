@@ -32,6 +32,21 @@ class NNDynamicsModel():
                  ):
         """ YOUR CODE HERE """
         """ Note: Be careful about normalization """
+        self.mean_s, self.std_s, self.mean_deltas, self.std_deltas, self.mean_a, self.std_a = normalization
+        self.sess = sess
+        self.batch_size = batch_size
+        self.iter = iterations
+        self.s_dim = env.observation_space.shape[0]
+        self.a_dim = env.action_space.shape[0]
+
+        self.s_a = tf.placeholder(shape=[None, self.s_dim + self.a_dim], name="s_a", dtype=tf.float32)
+        self.deltas = tf.placeholder(shape=[None, self.s_dim], name="deltas", dtype=tf.float32)
+        self.deltas_predict = build_mlp(self.s_a, self.s_dim, "NND", n_layers=n_layers, size=size,
+                                 activation=activation, output_activation=output_activation)
+
+        self.loss = tf.reduce_mean(tf.square(self.deltas_predict - self.deltas))
+        self.train_op = tf.train.AdamOptimizer(learning_rate).minimize(self.loss)
+
 
     def fit(self, data):
         """
@@ -39,7 +54,38 @@ class NNDynamicsModel():
         """
 
         """YOUR CODE HERE """
+        states = np.concatenate([d["state"] for d in data])
+        next_states = np.concatenate([d["next_state"] for d in data])
+        actions = np.concatenate([d["action"] for d in data])
+        N = states.shape[0]
+        train_indicies = np.arange(N)
+
+        #normalization
+        norm_states = (states - self.mean_s) / (self.std_s + 1e-9)
+        norm_actions = (actions - self.mean_a) / (self.std_a + 1e-9)
+        s_a = np.concatenate((norm_states, norm_actions), axis=1)
+        delta_norm = ((next_states - states) - self.mean_deltas) / (self.std_deltas + 1e-9)
+
+        #train
+        for j in range(self.iter):
+            np.random.shuffle(train_indicies)
+            for i in range(int(math.ceil(N / self.batch_size))):
+                start_idx = i * self.batch_size % N
+                idx = train_indicies[start_idx:start_idx + self.batch_size]
+                batch_x = s_a[idx, :]
+                batch_y = deltas_norm[idx, :]
+                self.sess.run([self.train_op], feed_dict={self.s_a: batch_x, self.deltas: batch_y})
 
     def predict(self, states, actions):
         """ Write a function to take in a batch of (unnormalized) states and (unnormalized) actions and return the (unnormalized) next states as predicted by using the model """
         """ YOUR CODE HERE """
+        
+        #normalization
+        norm_states = (states - self.mean_s) / (self.std_s + 1e-9)
+        norm_actions = (actions - self.mean_a) / (self.std_a + 1e-9)
+        s_a = np.concatenate((norm_states, norm_actions), axis=1)
+
+        delta = self.sess.run(self.deltas_predict, feed_dict={self.s_a: s_a})
+
+        pred = delta * self.std_deltas + self.mean_deltas + states
+        return pred 

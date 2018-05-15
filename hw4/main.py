@@ -10,6 +10,9 @@ import os
 import copy
 import matplotlib.pyplot as plt
 from cheetah_env import HalfCheetahEnvNew
+import os
+os.environ["CUDA_VISIBLE_DEVICES"]="3"  
+import tqdm
 
 def sample(env, 
            controller, 
@@ -24,6 +27,25 @@ def sample(env,
     """
     paths = []
     """ YOUR CODE HERE """
+    for _ in tqdm.tqdm(range(num_paths)):
+        ob = env.reset()
+        obs, next_obs, acts, rewards, costs = [], [], [], [], []
+        steps = 0
+        while True:
+            obs.append(ob)
+            act = controller.get_action(ob)
+            acts.append(act)
+            ob, rew, done, _ = env.step(act)
+            next_obs.append(ob)
+            rewards.append(rew)
+            steps += 1
+            if done or steps >= horizon:
+                break
+        path = {"states": np.array(obs), 
+                "next_states": np.array(next_obs), 
+                "rewards": np.array(rewards),
+                "actions": np.array(acts)}
+        paths.append(path)
 
     return paths
 
@@ -36,9 +58,23 @@ def compute_normalization(data):
     Write a function to take in a dataset and compute the means, and stds.
     Return 6 elements: mean of s_t, std of s_t, mean of (s_t+1 - s_t), std of (s_t+1 - s_t), mean of actions, std of actions
     """
-
     """ YOUR CODE HERE """
-    return mean_obs, std_obs, mean_deltas, std_deltas, mean_action, std_action
+    # group states, next states, and actions of paths together
+    states = np.concatenate([d["states"] for d in data])
+    next_states = np.concatenate([d["next_states"] for d in data])
+    acts = np.concatenate([d["actions"] for d in data])
+
+    # calc means
+    mean_obs = np.mean(states, axis=0) 
+    mean_deltas = np.mean(next_states - states, axis=0)
+    mean_actions = np.mean(acts, axis=0)
+
+    # calc stds
+    std_obs = np.std(states, axis=0) 
+    std_deltas = np.std(next_states - states, axis=0)
+    std_actions = np.std(acts, axis=0)
+
+    return mean_obs, std_obs, mean_deltas, std_deltas, mean_actions, std_actions
 
 
 def plot_comparison(env, dyn_model):
@@ -112,7 +148,7 @@ def train(env,
     random_controller = RandomController(env)
 
     """ YOUR CODE HERE """
-
+    data = sample(env, random_controller, num_paths_random, env_horizon)
 
     #========================================================
     # 
@@ -122,8 +158,8 @@ def train(env,
     # for normalizing inputs and denormalizing outputs
     # from the dynamics network. 
     # 
-    normalization = """ YOUR CODE HERE """
-
+    # normalization = """ YOUR CODE HERE """
+    normalization = compute_normalization(data)
 
     #========================================================
     # 
